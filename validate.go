@@ -115,6 +115,7 @@ var int_allowed = map[string](func(int64, string) bool){
 }
 
 type FieldCheck struct {
+	instance interface{}
 }
 
 func (checker *FieldCheck) checkBoolField(val reflect.Value, field reflect.StructField) error {
@@ -125,9 +126,33 @@ func (checker *FieldCheck) checkBasicField(val reflect.Value, field reflect.Stru
 	return nil
 }
 
+func reflectCall(ins interface{}, funcname string, arg1 reflect.Value) bool {
+	var ret bool
+	ret = true
+	defer func() {
+		e := recover()
+		if e != nil {
+			if ee, ok := e.(error); ok {
+				logs.Info(ee.Error())
+			}
+		}
+	}()
+	if method := reflect.ValueOf(ins).MethodByName(funcname); method.IsValid() {
+		mtype := method.Type()
+		args := make([]reflect.Value, mtype.NumIn())
+		args[0] = arg1
+		results := method.Call(args)
+		if len(results) > 0 {
+			ret = results[0].Bool()
+		}
+
+	}
+	return ret
+
+}
+
 func (checker *FieldCheck) checkStringField(val reflect.Value, field reflect.StructField) error {
 
-	println(type_map)
 	for tagname, tagfunc := range string_allowed {
 		if tagvalue, ok := field.Tag.Lookup(tagname); ok {
 			checked := tagfunc(val.String(), tagvalue)
@@ -215,6 +240,12 @@ func getKind(val reflect.Value) reflect.Kind {
 
 func (checker *FieldCheck) checkByType(val reflect.Value, field reflect.StructField) error {
 	var err error
+
+	if tagvalue, ok := field.Tag.Lookup("func"); ok {
+		if !reflectCall(checker.instance, tagvalue, val) {
+			return fmt.Errorf("Error checking: field: %s, value: %#v, validate use: func", field.Name, val.Interface())
+		}
+	}
 	dataKind := getKind(val)
 	switch dataKind {
 	case reflect.Bool:

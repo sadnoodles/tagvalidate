@@ -5,6 +5,17 @@ import (
 	"testing"
 )
 
+type ValidateTestModel struct {
+	Id          int64  `zero:"false"`
+	Name        string `empty:"false"`
+	CustomCheck string `func:"CheckCustom"`
+}
+
+func (vtm *ValidateTestModel) CheckCustom(s string) string {
+	println("in custom func", s)
+	return s
+}
+
 func TestFieldCheck_checkStringField(t *testing.T) {
 	type args struct {
 		val   reflect.Value
@@ -90,6 +101,32 @@ func Test_regx_check(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := regx_check(tt.args.v, tt.args.regx); got != tt.want {
 				t.Errorf("regx_check() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestFieldCheck_validateTags(t *testing.T) {
+	type args struct {
+		instance interface{}
+	}
+	var ins ValidateTestModel
+	chk := &FieldCheck{&ins}
+	ins.CustomCheck = "hello"
+	tests := []struct {
+		name    string
+		checker *FieldCheck
+		args    args
+		want    []error
+	}{
+		// TODO: Add test cases.
+		{"full_field_check", chk, args{ins},
+			[]error{}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.checker.validateTags(tt.args.instance); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("FieldCheck.validateTags() = %v, want %v", got, tt.want)
 			}
 		})
 	}
