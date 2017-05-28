@@ -20,25 +20,25 @@ func regx_check(v string, regx string) bool {
 }
 
 var string_allowed = map[string](func(string, string) bool){
-	"eq":        func(v string, t string) bool { return v == t },                      //(string)strictly equal to a string
-	"neq":       func(v string, t string) bool { return v != t },                      //(string)strictly not equal to a string
-	"starts":    func(v string, t string) bool { return strings.HasPrefix(v, t) },     //(string)strictly starts with a string
-	"ends":      func(v string, t string) bool { return strings.HasSuffix(v, t) },     //(string)strictly ends with a string
-	"contains":  func(v string, t string) bool { return strings.Contains(v, t) },      //(string)strictly contains a string
-	"ncontains": func(v string, t string) bool { return !strings.Contains(v, t) },     //(string)strictly not contains a string
-	"upper":     func(v string, t string) bool { return strings.ToUpper(v) == v },     //(bool) must be upper case
-	"lower":     func(v string, t string) bool { return strings.ToLower(v) == v },     //(bool) must be lower case
-	"empty":     func(v string, t string) bool { return (t == "false") && (v != "") }, //(bool) if allow empty?
-	"len":       func(v string, t string) bool { return fmt.Sprint(len(v)) == t },     //(int) strictly set length to some value
+	"eq":        func(v string, t string) bool { return v == t },                                         //(string)strictly equal to a string
+	"neq":       func(v string, t string) bool { return v != t },                                         //(string)strictly not equal to a string
+	"starts":    func(v string, t string) bool { return strings.HasPrefix(v, t) },                        //(string)strictly starts with a string
+	"ends":      func(v string, t string) bool { return strings.HasSuffix(v, t) },                        //(string)strictly ends with a string
+	"contains":  func(v string, t string) bool { return strings.Contains(v, t) },                         //(string)strictly contains a string
+	"ncontains": func(v string, t string) bool { return !strings.Contains(v, t) },                        //(string)strictly not contains a string
+	"upper":     func(v string, t string) bool { return strings.ToUpper(v) == v },                        //(bool) must be upper case
+	"lower":     func(v string, t string) bool { return strings.ToLower(v) == v },                        //(bool) must be lower case
+	"empty":     func(v string, t string) bool { return (t == "true") || ((t == "false") && (v != "")) }, //(bool) if allow empty?
+	"len":       func(v string, t string) bool { return fmt.Sprint(len(v)) == t },                        //(int) strictly set length to some value
 	"max_len": func(v string, t string) bool {
-		if ml, err := strconv.Atoi(t); err != nil {
+		if ml, err := strconv.Atoi(t); err == nil {
 			return ml > len(v)
 		} else {
 			return true
 		}
 	}, //(int) strictly set max length
 	"min_len": func(v string, t string) bool {
-		if ml, err := strconv.Atoi(t); err != nil {
+		if ml, err := strconv.Atoi(t); err == nil {
 			return ml < len(v)
 		} else {
 			return true
@@ -67,11 +67,12 @@ var type_map = map[string]typeAttr{
 	"hex":                  {0, `^[a-fA-F0-9]+$`},
 	"bin":                  {0, `^[01]+$`},
 	"ip":                   {0, `^((?:(?:25[0-5]|2[0-4]\d|((1\d{2})|([1-9]?\d)))\.){3}(?:25[0-5]|2[0-4]\d|((1\d{2})|([1-9]?\d))))$`}, //python reg
+	"base64":               {0, ``},
 	"email":                {0, ``},
 	"url":                  {0, ``},
 	"color":                {0, ``},
 	"path":                 {0, ``},
-	"uuid":                 {0, ``},
+	"uuid":                 {0, `^[a-f\d]{8}-([a-f\d]{4}-){3}[a-f\d]{12}$`},
 	"domain":               {1, ``},
 	"date(%Y%M%D)":         {1, ``}, //allow template %Y%M%D-%h%m%s%c
 	"json[(child)]":        {1, ``},
@@ -79,19 +80,44 @@ var type_map = map[string]typeAttr{
 	"list[(child)]":        {1, ``}, // allow recursion
 }
 
+var int_allowed = map[string](func(int64, string) bool){
+	"eq": func(v int64, t string) bool {
+		if veq, err := strconv.Atoi(t); err == nil {
+			return int64(veq) == v
+		} else {
+			return true
+		}
+	}, //(int/[]int)must in those values
+	"neq": func(v int64, t string) bool {
+		if veq, err := strconv.Atoi(t); err == nil {
+			return int64(veq) != v
+		} else {
+			return true
+		}
+	}, //(int/[]int)must in those values
+	"zero": func(v int64, t string) bool { return (t == "true") || ((t == "false") && (v != 0)) }, //(bool) if allow zero?
+	"max": func(v int64, t string) bool {
+		if ml, err := strconv.ParseInt(t, 10, 64); err == nil {
+			return ml > v
+		} else {
+			return true
+		}
+	}, //(int) strictly set max
+	"min": func(v int64, t string) bool {
+		if ml, err := strconv.ParseInt(t, 10, 64); err == nil {
+			return ml < v
+		} else {
+			logs.Info("Convert error:", t)
+			return true
+		}
+	}, //(int) strictly set min
+	"func": func(v int64, t string) bool { return true }, //(string) given check func name under this struct
+}
+
 type FieldCheck struct {
 }
 
 func (checker *FieldCheck) checkBoolField(val reflect.Value, field reflect.StructField) error {
-	var allowed = []string{} // No need to validate
-	for _, tagname := range allowed {
-		if tagvalue, ok := field.Tag.Lookup(tagname); ok {
-			println(tagname, tagvalue, ok)
-		} else {
-			println(tagname, tagvalue, ok)
-		}
-
-	}
 	return nil
 }
 
@@ -115,19 +141,13 @@ func (checker *FieldCheck) checkStringField(val reflect.Value, field reflect.Str
 }
 
 func (checker *FieldCheck) checkIntField(val reflect.Value, field reflect.StructField) error {
-	var allowed = []string{
-		"eq",   //(int/[]int)must in those values
-		"neq",  //(int/[]int)must in those values
-		"zero", //(bool) if allow zero?
-		"max",  //(int) strictly set max
-		"min",  //(int) strictly set min
-		"func", //(string) given check func name under this struct
-	}
-	for _, tagname := range allowed {
+
+	for tagname, tagfunc := range int_allowed {
 		if tagvalue, ok := field.Tag.Lookup(tagname); ok {
-			println(tagname, tagvalue, ok)
+			checked := tagfunc(val.Int(), tagvalue)
+			println(ok, tagname, tagvalue, val.String(), checked)
 		} else {
-			println(tagname, tagvalue, ok)
+			// println(ok, tagname, tagvalue)
 		}
 
 	}
@@ -226,7 +246,7 @@ func (checker *FieldCheck) checkByType(val reflect.Value, field reflect.StructFi
 	return err
 }
 
-func validateTags(instance interface{}) []error {
+func (checker *FieldCheck) validateTags(instance interface{}) []error {
 	val := reflect.ValueOf(instance)
 
 	if val.Kind() == reflect.Ptr {
@@ -241,48 +261,15 @@ func validateTags(instance interface{}) []error {
 	var errs []error
 
 	for i := 0; i < st.NumField(); i++ {
-		// field := st.Field(i)
+		field := st.Field(i)
 		fieldvalue := val.Field(i)
 		if !fieldvalue.CanInterface() {
 			continue
 		}
-		// val := fieldvalue.Interface()
-		// tag := field.Tag.Get("validate")
-		// if tag == "" {
-		// 	continue
-		// }
-		// vts := strings.Split(tag, ",")
-
-		// for _, vt := range vts {
-		// 	name := field.Name
-		// 	if nameTag != "" {
-		// 		name = field.Tag.Get(nameTag)
-		// 	}
-
-		// 	if len(prefix) > 0 {
-		// 		name = prefix + "." + name
-		// 	}
-
-		// 	if vt == "struct" {
-		// 		errs2 := v.validateAndTagPrefix(val, nameTag, name)
-		// 		if len(errs2) > 0 {
-		// 			errs = append(errs, errs2...)
-		// 		}
-		// 		continue
-		// 	}
-
-		// 	vf := v[vt]
-		// 	if vf == nil {
-		// 		errs = append(errs, BadField{
-		// 			Field: name,
-		// 			Err:   fmt.Errorf("undefined validator: %q", vt),
-		// 		})
-		// 		continue
-		// 	}
-		// 	if err := vf(val); err != nil {
-		// 		errs = append(errs, BadField{name, err})
-		// 	}
-		// }
+		err := checker.checkByType(fieldvalue, field)
+		if err != nil {
+			errs = append(errs, err)
+		}
 	}
 
 	return errs
