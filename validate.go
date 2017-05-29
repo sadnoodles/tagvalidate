@@ -2,19 +2,18 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
-
-	"github.com/astaxie/beego/logs"
 )
 
 func regx_check(v string, regx string) bool {
 	if match, err := regexp.MatchString(regx, v); err == nil {
 		return match
 	} else {
-		logs.Info("Regexp error:", regx)
+		log.Println("Regexp error:", regx)
 		return true
 	}
 }
@@ -107,7 +106,7 @@ var int_allowed = map[string](func(int64, string) bool){
 		if ml, err := strconv.ParseInt(t, 10, 64); err == nil {
 			return ml < v
 		} else {
-			logs.Info("Convert error:", t)
+			log.Println("Convert error:", t)
 			return true
 		}
 	}, //(int) strictly set min
@@ -133,7 +132,7 @@ func reflectCall(ins interface{}, funcname string, arg1 reflect.Value) bool {
 		e := recover()
 		if e != nil {
 			if ee, ok := e.(error); ok {
-				logs.Info(ee.Error())
+				log.Println(ee.Error())
 			}
 		}
 	}()
