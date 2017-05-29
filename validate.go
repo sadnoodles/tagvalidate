@@ -7,7 +7,7 @@ import (
 )
 
 type FieldCheck struct {
-	tag_prefix string
+	tag_prefix string `empty:"true" regx:"^[a-zA-Z]\\w+$"`
 }
 
 var msgmap = map[int]string{
@@ -30,6 +30,11 @@ func GetError(id int, fieldname string, tagname string, tagvalve string, gotvalu
 func Check(instance interface{}) error {
 	var err error
 	ck := new(FieldCheck)
+	ck_ck := new(FieldCheck)
+	err = ck_ck.ValidateStruct(ck)
+	if err != nil {
+		return err
+	}
 	err = ck.ValidateStruct(instance)
 	return err
 }
