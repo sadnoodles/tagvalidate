@@ -183,7 +183,7 @@ func (checker *FieldCheck) ValidateStructV(val reflect.Value) error {
 	for i := 0; i < val.NumField(); i++ {
 		valueField := val.Field(i)
 		typeField := val.Type().Field(i)
-		address := "not-addressable"
+		// address := "not-addressable"
 
 		if valueField.Kind() == reflect.Interface && !valueField.IsNil() {
 			elm := valueField.Elem()
@@ -196,12 +196,12 @@ func (checker *FieldCheck) ValidateStructV(val reflect.Value) error {
 			valueField = valueField.Elem()
 
 		}
-		if valueField.CanAddr() {
-			address = fmt.Sprintf("0x%X", valueField.Addr().Pointer())
-		}
+		// if valueField.CanAddr() {
+		// 	address = fmt.Sprintf("0x%X", valueField.Addr().Pointer())
+		// }
 
-		fmt.Printf("Field Name: %s,\t Field Value: %v,\t Address: %v\t, Field type: %v\t, Field kind: %v\n", typeField.Name,
-			valueField.Interface(), address, typeField.Type, valueField.Kind())
+		// fmt.Printf("Field Name: %s,\t Field Value: %v,\t Address: %v\t, Field type: %v\t, Field kind: %v\n", typeField.Name,
+		// 	valueField.Interface(), address, typeField.Type, valueField.Kind())
 
 		if valueField.Kind() == reflect.Struct {
 			return checker.ValidateStructV(valueField)
