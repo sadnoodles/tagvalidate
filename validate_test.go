@@ -1,4 +1,4 @@
-package main
+package validate
 
 import (
 	"reflect"
@@ -7,7 +7,7 @@ import (
 
 type ValidateTestModel struct {
 	Id          int64          `zero:"false"`
-	Name        string         `empty:"false"`
+	Name        string         `empty:"false" type:"ip"`
 	CustomCheck string         `func:"CheckCustom"`
 	Actions     map[string]int `func:"CheckAction"`
 	Emptytag    map[string]int
@@ -20,7 +20,7 @@ func (vtm *ValidateTestModel) CheckCustom(s string) bool {
 
 func (vtm *ValidateTestModel) CheckAction(a map[string]int) bool {
 	println("in custom func", a)
-	return len(a) == 1
+	return len(a) == 0
 }
 
 func TestFieldCheck_checkStringField(t *testing.T) {
@@ -124,16 +124,283 @@ func TestFieldCheck_validateTags(t *testing.T) {
 		name    string
 		checker *FieldCheck
 		args    args
-		want    []error
+		wantErr bool
 	}{
 		// TODO: Add test cases.
 		{"full_field_check", chk, args{&ins},
-			[]error{}},
+			false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.checker.validateTags(tt.args.instance); !reflect.DeepEqual(len(got), len(tt.want)) {
-				t.Errorf("FieldCheck.validateTags() = %v, want %v", got, tt.want)
+			if err := tt.checker.validateTags(tt.args.instance); (err != nil) != tt.wantErr {
+				t.Errorf("FieldCheck.validateTags() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestFieldCheck_checkBoolField(t *testing.T) {
+	type args struct {
+		val   reflect.Value
+		field reflect.StructField
+	}
+	tests := []struct {
+		name    string
+		checker *FieldCheck
+		args    args
+		wantErr bool
+	}{
+	// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := tt.checker.checkBoolField(tt.args.val, tt.args.field); (err != nil) != tt.wantErr {
+				t.Errorf("FieldCheck.checkBoolField() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestFieldCheck_checkBasicField(t *testing.T) {
+	type args struct {
+		val   reflect.Value
+		field reflect.StructField
+	}
+	tests := []struct {
+		name    string
+		checker *FieldCheck
+		args    args
+		wantErr bool
+	}{
+	// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := tt.checker.checkBasicField(tt.args.val, tt.args.field); (err != nil) != tt.wantErr {
+				t.Errorf("FieldCheck.checkBasicField() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestFieldCheck_checkIntField(t *testing.T) {
+	type args struct {
+		val   reflect.Value
+		field reflect.StructField
+	}
+	tests := []struct {
+		name    string
+		checker *FieldCheck
+		args    args
+		wantErr bool
+	}{
+	// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := tt.checker.checkIntField(tt.args.val, tt.args.field); (err != nil) != tt.wantErr {
+				t.Errorf("FieldCheck.checkIntField() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestFieldCheck_checkUintField(t *testing.T) {
+	type args struct {
+		val   reflect.Value
+		field reflect.StructField
+	}
+	tests := []struct {
+		name    string
+		checker *FieldCheck
+		args    args
+		wantErr bool
+	}{
+	// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := tt.checker.checkUintField(tt.args.val, tt.args.field); (err != nil) != tt.wantErr {
+				t.Errorf("FieldCheck.checkUintField() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestFieldCheck_checkFloatField(t *testing.T) {
+	type args struct {
+		val   reflect.Value
+		field reflect.StructField
+	}
+	tests := []struct {
+		name    string
+		checker *FieldCheck
+		args    args
+		wantErr bool
+	}{
+	// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := tt.checker.checkFloatField(tt.args.val, tt.args.field); (err != nil) != tt.wantErr {
+				t.Errorf("FieldCheck.checkFloatField() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestFieldCheck_checkStructField(t *testing.T) {
+	type args struct {
+		val   reflect.Value
+		field reflect.StructField
+	}
+	tests := []struct {
+		name    string
+		checker *FieldCheck
+		args    args
+		wantErr bool
+	}{
+	// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := tt.checker.checkStructField(tt.args.val, tt.args.field); (err != nil) != tt.wantErr {
+				t.Errorf("FieldCheck.checkStructField() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestFieldCheck_checkMapField(t *testing.T) {
+	type args struct {
+		val   reflect.Value
+		field reflect.StructField
+	}
+	tests := []struct {
+		name    string
+		checker *FieldCheck
+		args    args
+		wantErr bool
+	}{
+	// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := tt.checker.checkMapField(tt.args.val, tt.args.field); (err != nil) != tt.wantErr {
+				t.Errorf("FieldCheck.checkMapField() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestFieldCheck_checkPtrField(t *testing.T) {
+	type args struct {
+		val   reflect.Value
+		field reflect.StructField
+	}
+	tests := []struct {
+		name    string
+		checker *FieldCheck
+		args    args
+		wantErr bool
+	}{
+	// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := tt.checker.checkPtrField(tt.args.val, tt.args.field); (err != nil) != tt.wantErr {
+				t.Errorf("FieldCheck.checkPtrField() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestFieldCheck_checkSliceField(t *testing.T) {
+	type args struct {
+		val   reflect.Value
+		field reflect.StructField
+	}
+	tests := []struct {
+		name    string
+		checker *FieldCheck
+		args    args
+		wantErr bool
+	}{
+	// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := tt.checker.checkSliceField(tt.args.val, tt.args.field); (err != nil) != tt.wantErr {
+				t.Errorf("FieldCheck.checkSliceField() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestFieldCheck_checkFuncField(t *testing.T) {
+	type args struct {
+		val   reflect.Value
+		field reflect.StructField
+	}
+	tests := []struct {
+		name    string
+		checker *FieldCheck
+		args    args
+		wantErr bool
+	}{
+	// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := tt.checker.checkFuncField(tt.args.val, tt.args.field); (err != nil) != tt.wantErr {
+				t.Errorf("FieldCheck.checkFuncField() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestCheck(t *testing.T) {
+	type args struct {
+		instance interface{}
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		// {"check instance",
+		// 	args{
+		// 		&ValidateTestModel{Id: 1, Name: "aaa", CustomCheck: "hello"}},
+		// 	false},
+		// {"check instance zero int",
+		// 	args{
+		// 		&ValidateTestModel{Name: "aaa", CustomCheck: "hello"}},
+		// 	true},
+		// {"check instance empty string",
+		// 	args{
+		// 		&ValidateTestModel{Id: 1, CustomCheck: "hello"}},
+		// 	true},
+		// {"check CustomCheck ref",
+		// 	args{
+		// 		&ValidateTestModel{Id: 1, Name: "aaa", CustomCheck: "he"}},
+		// 	true},
+		{"check instance ip",
+			args{
+				&ValidateTestModel{Id: 1, Name: "256.55.4.5", CustomCheck: "hello"}},
+			false},
+		{"check instance ip",
+			args{
+				&ValidateTestModel{Id: 1, Name: "255.22.33.11", CustomCheck: "hello"}},
+			false},
+		// {"check CustomCheck ptr",
+		// 	args{
+		// 		ValidateTestModel{Id: 1, Name: "aaa", CustomCheck: "he"}},
+		// 	true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := Check(tt.args.instance); (err != nil) != tt.wantErr {
+				t.Errorf("Check() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
