@@ -30,7 +30,7 @@ func GetError(id int, fieldname string, tagname string, tagvalve string, gotvalu
 func Check(instance interface{}) error {
 	var err error
 	ck := new(FieldCheck)
-	err = ck.validateTags(instance)
+	err = ck.ValidateStruct(instance)
 	return err
 }
 
@@ -43,6 +43,10 @@ func (checker *FieldCheck) checkBasicField(val reflect.Value, field reflect.Stru
 }
 
 func reflectCall(ins interface{}, funcname string, arg1 reflect.Value) bool {
+	return reflectCallV(reflect.ValueOf(ins), funcname, arg1)
+}
+
+func reflectCallV(ins reflect.Value, funcname string, arg1 reflect.Value) bool {
 	var ret bool
 	ret = true
 	defer func() {
@@ -53,7 +57,7 @@ func reflectCall(ins interface{}, funcname string, arg1 reflect.Value) bool {
 			}
 		}
 	}()
-	if method := reflect.ValueOf(ins).MethodByName(funcname); method.IsValid() {
+	if method := ins.MethodByName(funcname); method.IsValid() {
 		mtype := method.Type()
 		args := make([]reflect.Value, mtype.NumIn())
 		args[0] = arg1
@@ -163,39 +167,61 @@ func (checker *FieldCheck) checkByType(val reflect.Value, field reflect.StructFi
 	return err
 }
 
-func (checker *FieldCheck) validateTags(instance interface{}) error {
-	val := reflect.ValueOf(instance)
+func (checker *FieldCheck) ValidateStructV(val reflect.Value) error {
+	// https://stackoverflow.com/questions/24348184/get-pointer-to-value-using-reflection
+	if val.Kind() == reflect.Interface && !val.IsNil() {
+		elm := val.Elem()
+		if elm.Kind() == reflect.Ptr && !elm.IsNil() && elm.Elem().Kind() == reflect.Ptr {
+			val = elm
+		}
+	}
+	oldval := val
 	if val.Kind() == reflect.Ptr {
 		val = val.Elem()
-	} else {
-		println(val.Kind())
 	}
 
-	st := val.Type()
-	if st == nil || st.Kind() != reflect.Struct {
-		return GetError(1, "", "", "", instance)
-	}
+	for i := 0; i < val.NumField(); i++ {
+		valueField := val.Field(i)
+		typeField := val.Type().Field(i)
+		address := "not-addressable"
 
-	var err error
-
-	for i := 0; i < st.NumField(); i++ {
-		field := st.Field(i)
-		fieldvalue := val.Field(i)
-		if !fieldvalue.CanInterface() {
-			continue
-		}
-		if tagvalue, ok := field.Tag.Lookup(checker.tag_prefix + "func"); ok {
-			var checked bool
-			checked = reflectCall(instance, tagvalue, fieldvalue)
-			if !checked {
-				return GetError(2, field.Name, "func", tagvalue, val.Interface())
+		if valueField.Kind() == reflect.Interface && !valueField.IsNil() {
+			elm := valueField.Elem()
+			if elm.Kind() == reflect.Ptr && !elm.IsNil() && elm.Elem().Kind() == reflect.Ptr {
+				valueField = elm
 			}
 		}
-		err = checker.checkByType(fieldvalue, field)
+
+		if valueField.Kind() == reflect.Ptr {
+			valueField = valueField.Elem()
+
+		}
+		if valueField.CanAddr() {
+			address = fmt.Sprintf("0x%X", valueField.Addr().Pointer())
+		}
+
+		fmt.Printf("Field Name: %s,\t Field Value: %v,\t Address: %v\t, Field type: %v\t, Field kind: %v\n", typeField.Name,
+			valueField.Interface(), address, typeField.Type, valueField.Kind())
+
+		if valueField.Kind() == reflect.Struct {
+			return checker.ValidateStructV(valueField)
+		}
+		if tagvalue, ok := typeField.Tag.Lookup(checker.tag_prefix + "func"); ok {
+			var checked bool
+			checked = reflectCallV(oldval, tagvalue, valueField)
+			if !checked {
+				return GetError(2, typeField.Name, "func", tagvalue, valueField.Interface())
+			}
+		}
+
+		err := checker.checkByType(valueField, typeField)
 		if err != nil {
 			return err
 		}
 	}
+	return nil
+}
 
-	return err
+func (checker *FieldCheck) ValidateStruct(v interface{}) error {
+	return checker.ValidateStructV(reflect.ValueOf(v))
 }

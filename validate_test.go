@@ -5,12 +5,16 @@ import (
 	"testing"
 )
 
+type CommonTestModel struct {
+	UUID string `empty:"false"`
+}
 type ValidateTestModel struct {
 	Id          int64          `zero:"false"`
-	Name        string         `empty:"false" type:"ip"`
+	Name        string         `empty:"false" type:"ipv4"`
 	CustomCheck string         `func:"CheckCustom"`
 	Actions     map[string]int `func:"CheckAction"`
 	Emptytag    map[string]int
+	CommonTestModel
 }
 
 func (vtm *ValidateTestModel) CheckCustom(s string) bool {
@@ -108,32 +112,6 @@ func Test_regx_check(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := regx_check(tt.args.v, tt.args.regx); got != tt.want {
 				t.Errorf("regx_check() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestFieldCheck_validateTags(t *testing.T) {
-	type args struct {
-		instance interface{}
-	}
-	var ins ValidateTestModel
-	var chk = &FieldCheck{}
-	ins.CustomCheck = "hello"
-	tests := []struct {
-		name    string
-		checker *FieldCheck
-		args    args
-		wantErr bool
-	}{
-		// TODO: Add test cases.
-		{"full_field_check", chk, args{&ins},
-			false},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if err := tt.checker.validateTags(tt.args.instance); (err != nil) != tt.wantErr {
-				t.Errorf("FieldCheck.validateTags() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
@@ -401,6 +379,54 @@ func TestCheck(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if err := Check(tt.args.instance); (err != nil) != tt.wantErr {
 				t.Errorf("Check() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestFieldCheck_ValidateStructV(t *testing.T) {
+	type args struct {
+		val reflect.Value
+	}
+	tests := []struct {
+		name    string
+		checker *FieldCheck
+		args    args
+		wantErr bool
+	}{
+	// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := tt.checker.ValidateStructV(tt.args.val); (err != nil) != tt.wantErr {
+				t.Errorf("FieldCheck.ValidateStructV() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestFieldCheck_ValidateStruct(t *testing.T) {
+	type args struct {
+		v interface{}
+	}
+	ck := new(FieldCheck)
+	tests := []struct {
+		name    string
+		checker *FieldCheck
+		args    args
+		wantErr bool
+	}{
+		// TODO: Add test cases.
+		{"check instance ip",
+			ck,
+			args{
+				&ValidateTestModel{Id: 1, Name: "255.55.4.5", CustomCheck: "hello"}},
+			true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := tt.checker.ValidateStruct(tt.args.v); (err != nil) != tt.wantErr {
+				t.Errorf("FieldCheck.ValidateStruct() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
