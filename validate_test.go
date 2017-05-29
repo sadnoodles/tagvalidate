@@ -93,30 +93,6 @@ func TestFieldCheck_checkByType(t *testing.T) {
 		})
 	}
 }
-
-func Test_regx_check(t *testing.T) {
-	type args struct {
-		v    string
-		regx string
-	}
-	tests := []struct {
-		name string
-		args args
-		want bool
-	}{
-		// TODO: Add test cases.
-		{"reg_tests", args{"123123", `\d+`}, true},
-		{"reg_tests", args{"asdas", `\d+`}, false},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := regx_check(tt.args.v, tt.args.regx); got != tt.want {
-				t.Errorf("regx_check() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func TestFieldCheck_checkBoolField(t *testing.T) {
 	type args struct {
 		val   reflect.Value

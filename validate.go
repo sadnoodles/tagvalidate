@@ -19,7 +19,7 @@ var msgmap = map[int]string{
 
 func GetError(id int, fieldname string, tagname string, tagvalve string, gotvalue interface{}) error {
 	var err error
-	pos := fmt.Sprintf("Field:%s tag:%s value:%s, Got: %#v", fieldname, tagname, tagvalve, gotvalue)
+	pos := fmt.Sprintf("Field:%s tag:%s wanted:%s, Got: %#v", fieldname, tagname, tagvalve, gotvalue)
 	if id == 0 {
 		return nil
 	}
