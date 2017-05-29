@@ -6,14 +6,21 @@ import (
 )
 
 type ValidateTestModel struct {
-	Id          int64  `zero:"false"`
-	Name        string `empty:"false"`
-	CustomCheck string `func:"CheckCustom"`
+	Id          int64          `zero:"false"`
+	Name        string         `empty:"false"`
+	CustomCheck string         `func:"CheckCustom"`
+	Actions     map[string]int `func:"CheckAction"`
+	Emptytag    map[string]int
 }
 
-func (vtm *ValidateTestModel) CheckCustom(s string) string {
+func (vtm *ValidateTestModel) CheckCustom(s string) bool {
 	println("in custom func", s)
-	return s
+	return s == "hello"
+}
+
+func (vtm *ValidateTestModel) CheckAction(a map[string]int) bool {
+	println("in custom func", a)
+	return len(a) == 1
 }
 
 func TestFieldCheck_checkStringField(t *testing.T) {
@@ -111,7 +118,7 @@ func TestFieldCheck_validateTags(t *testing.T) {
 		instance interface{}
 	}
 	var ins ValidateTestModel
-	chk := &FieldCheck{&ins}
+	var chk = &FieldCheck{}
 	ins.CustomCheck = "hello"
 	tests := []struct {
 		name    string
@@ -120,12 +127,12 @@ func TestFieldCheck_validateTags(t *testing.T) {
 		want    []error
 	}{
 		// TODO: Add test cases.
-		{"full_field_check", chk, args{ins},
+		{"full_field_check", chk, args{&ins},
 			[]error{}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.checker.validateTags(tt.args.instance); !reflect.DeepEqual(got, tt.want) {
+			if got := tt.checker.validateTags(tt.args.instance); !reflect.DeepEqual(len(got), len(tt.want)) {
 				t.Errorf("FieldCheck.validateTags() = %v, want %v", got, tt.want)
 			}
 		})

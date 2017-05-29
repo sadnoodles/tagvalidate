@@ -75,9 +75,9 @@ var type_map = map[string]typeAttr{
 	"uuid":                 {0, `^[a-f\d]{8}-([a-f\d]{4}-){3}[a-f\d]{12}$`},
 	"domain":               {1, ``},
 	"date(%Y%M%D)":         {1, ``}, //allow template %Y%M%D-%h%m%s%c
-	"json[(child)]":        {1, ``},
-	"map[(child):(child)]": {1, ``}, // allow recursion
-	"list[(child)]":        {1, ``}, // allow recursion
+	"json[(child)]":        {2, ``},
+	"map[(child):(child)]": {2, ``}, // allow recursion
+	"list[(child)]":        {2, ``}, // allow recursion
 }
 
 var int_allowed = map[string](func(int64, string) bool){
@@ -115,7 +115,7 @@ var int_allowed = map[string](func(int64, string) bool){
 }
 
 type FieldCheck struct {
-	instance interface{}
+	tag_prefix string
 }
 
 func (checker *FieldCheck) checkBoolField(val reflect.Value, field reflect.StructField) error {
@@ -154,7 +154,7 @@ func reflectCall(ins interface{}, funcname string, arg1 reflect.Value) bool {
 func (checker *FieldCheck) checkStringField(val reflect.Value, field reflect.StructField) error {
 
 	for tagname, tagfunc := range string_allowed {
-		if tagvalue, ok := field.Tag.Lookup(tagname); ok {
+		if tagvalue, ok := field.Tag.Lookup(checker.tag_prefix + tagname); ok {
 			checked := tagfunc(val.String(), tagvalue)
 			println(ok, tagname, tagvalue, val.String(), checked)
 		} else {
@@ -168,7 +168,7 @@ func (checker *FieldCheck) checkStringField(val reflect.Value, field reflect.Str
 func (checker *FieldCheck) checkIntField(val reflect.Value, field reflect.StructField) error {
 
 	for tagname, tagfunc := range int_allowed {
-		if tagvalue, ok := field.Tag.Lookup(tagname); ok {
+		if tagvalue, ok := field.Tag.Lookup(checker.tag_prefix + tagname); ok {
 			checked := tagfunc(val.Int(), tagvalue)
 			println(ok, tagname, tagvalue, val.String(), checked)
 		} else {
@@ -193,7 +193,7 @@ func (checker *FieldCheck) checkFloatField(val reflect.Value, field reflect.Stru
 		"func", //(string) given check func name under this struct
 	}
 	for _, tagname := range allowed {
-		if tagvalue, ok := field.Tag.Lookup(tagname); ok {
+		if tagvalue, ok := field.Tag.Lookup(checker.tag_prefix + tagname); ok {
 			println(tagname, tagvalue, ok)
 		} else {
 			println(tagname, tagvalue, ok)
@@ -241,11 +241,6 @@ func getKind(val reflect.Value) reflect.Kind {
 func (checker *FieldCheck) checkByType(val reflect.Value, field reflect.StructField) error {
 	var err error
 
-	if tagvalue, ok := field.Tag.Lookup("func"); ok {
-		if !reflectCall(checker.instance, tagvalue, val) {
-			return fmt.Errorf("Error checking: field: %s, value: %#v, validate use: func", field.Name, val.Interface())
-		}
-	}
 	dataKind := getKind(val)
 	switch dataKind {
 	case reflect.Bool:
@@ -253,9 +248,9 @@ func (checker *FieldCheck) checkByType(val reflect.Value, field reflect.StructFi
 	case reflect.Interface:
 		err = checker.checkBasicField(val, field)
 	case reflect.String:
-		err = checker.checkStringField(val, field) //todo
+		err = checker.checkStringField(val, field) // done
 	case reflect.Int:
-		err = checker.checkIntField(val, field) //todo
+		err = checker.checkIntField(val, field) // done
 	case reflect.Uint:
 		err = checker.checkUintField(val, field) //todo
 	case reflect.Float32:
@@ -279,7 +274,6 @@ func (checker *FieldCheck) checkByType(val reflect.Value, field reflect.StructFi
 
 func (checker *FieldCheck) validateTags(instance interface{}) []error {
 	val := reflect.ValueOf(instance)
-
 	if val.Kind() == reflect.Ptr {
 		val = val.Elem()
 	}
@@ -296,6 +290,14 @@ func (checker *FieldCheck) validateTags(instance interface{}) []error {
 		fieldvalue := val.Field(i)
 		if !fieldvalue.CanInterface() {
 			continue
+		}
+		if tagvalue, ok := field.Tag.Lookup(checker.tag_prefix + "func"); ok {
+			var checked bool
+			checked = reflectCall(instance, tagvalue, fieldvalue)
+			if !checked {
+				err1 := fmt.Errorf("Error checking: field: %s, value: %#v, validate use: func", field.Name, fieldvalue.Interface())
+				errs = append(errs, err1)
+			}
 		}
 		err := checker.checkByType(fieldvalue, field)
 		if err != nil {
