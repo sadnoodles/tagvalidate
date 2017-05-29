@@ -34,6 +34,10 @@ func Check(instance interface{}) error {
 	return err
 }
 
+func (checker *FieldCheck) getTagName(name string) string {
+	return checker.tag_prefix + name
+
+}
 func (checker *FieldCheck) checkBoolField(val reflect.Value, field reflect.StructField) error {
 	return nil
 }
@@ -72,7 +76,7 @@ func reflectCallV(ins reflect.Value, funcname string, arg1 reflect.Value) bool {
 }
 
 func (checker *FieldCheck) getFieldTag(field reflect.StructField, tagname string) (string, bool) {
-	if tagvalue, ok := field.Tag.Lookup(checker.tag_prefix + tagname); ok {
+	if tagvalue, ok := field.Tag.Lookup(checker.getTagName(tagname)); ok {
 		return tagvalue, true
 	}
 	return "", false
@@ -88,7 +92,7 @@ func (checker *FieldCheck) checkFloatField(val reflect.Value, field reflect.Stru
 		"func", //(string) given check func name under this struct
 	}
 	for _, tagname := range allowed {
-		if tagvalue, ok := field.Tag.Lookup(checker.tag_prefix + tagname); ok {
+		if tagvalue, ok := field.Tag.Lookup(checker.getTagName(tagname)); ok {
 			println(tagname, tagvalue, ok)
 		} else {
 			println(tagname, tagvalue, ok)
@@ -206,7 +210,7 @@ func (checker *FieldCheck) ValidateStructV(val reflect.Value) error {
 		if valueField.Kind() == reflect.Struct {
 			return checker.ValidateStructV(valueField)
 		}
-		if tagvalue, ok := typeField.Tag.Lookup(checker.tag_prefix + "func"); ok {
+		if tagvalue, ok := typeField.Tag.Lookup(checker.getTagName("func")); ok {
 			var checked bool
 			checked = reflectCallV(oldval, tagvalue, valueField)
 			if !checked {

@@ -92,7 +92,7 @@ func (checker *FieldCheck) checkStringField(val reflect.Value, field reflect.Str
 		return nil
 	}
 	for tagname, tagfunc := range table {
-		if tagvalue, ok := field.Tag.Lookup(checker.tag_prefix + tagname); ok {
+		if tagvalue, ok := field.Tag.Lookup(checker.getTagName(tagname)); ok {
 			checked := tagfunc(valreal, tagvalue)
 			// println(ok, tagname, tagvalue, val.String(), checked)
 			if !checked {

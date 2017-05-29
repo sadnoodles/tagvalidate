@@ -51,7 +51,7 @@ func (checker *FieldCheck) checkIntField(val reflect.Value, field reflect.Struct
 		return nil
 	}
 	for tagname, tagfunc := range table {
-		if tagvalue, ok := field.Tag.Lookup(checker.tag_prefix + tagname); ok {
+		if tagvalue, ok := field.Tag.Lookup(checker.getTagName(tagname)); ok {
 			checked := tagfunc(valreal, tagvalue)
 			// println(ok, tagname, tagvalue, val.String(), checked)
 			if !checked {
