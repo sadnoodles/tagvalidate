@@ -1,8 +1,10 @@
 package tagvalidate
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
+	"net/url"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -15,11 +17,6 @@ const (
 	CreditCard     string = "^(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|6(?:011|5[0-9][0-9])[0-9]{12}|3[47][0-9]{13}|3(?:0[0-5]|[68][0-9])[0-9]{11}|(?:2131|1800|35\\d{3})\\d{11})$"
 	ISBN10         string = "^(?:[0-9]{9}X|[0-9]{10})$"
 	ISBN13         string = "^(?:[0-9]{13})$"
-	UUID3          string = "^[0-9a-f]{8}-[0-9a-f]{4}-3[0-9a-f]{3}-[0-9a-f]{4}-[0-9a-f]{12}$"
-	UUID4          string = "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
-	UUID5          string = "^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
-	UUID           string = "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
-	Alpha          string = "^[a-zA-Z]+$"
 	Alphanumeric   string = "^[a-zA-Z0-9]+$"
 	Numeric        string = "^[0-9]+$"
 	Int            string = "^(?:[-+]?(?:0|[1-9][0-9]*))$"
@@ -52,21 +49,26 @@ const (
 	Semver         string = "^v?(?:0|[1-9]\\d*)\\.(?:0|[1-9]\\d*)\\.(?:0|[1-9]\\d*)(-(0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(\\.(0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*)?(\\+[0-9a-zA-Z-]+(\\.[0-9a-zA-Z-]+)*)?$"
 )
 
+type typeAttr struct {
+	CheckBy int `max:"2" min:"0"` //0:regx, 1:func
+	Regx    string
+}
+
 func regx_check(v string, regx string) bool {
 	if match, err := regexp.MatchString(regx, v); err == nil {
 		return match
 	} else {
 		log.Println("Regexp error:", regx)
-		return true
+		return false
 	}
 }
 
-var string_allowed = map[string](func(string, string) bool){
+var tag_map = map[string](func(string, string) bool){
 	"eq":        func(v string, t string) bool { return v == t },                                         //(string)strictly equal to a string
 	"neq":       func(v string, t string) bool { return v != t },                                         //(string)strictly not equal to a string
-	"starts":    func(v string, t string) bool { return strings.HasPrefix(v, t) },                        //(string)strictly starts with a string
-	"ends":      func(v string, t string) bool { return strings.HasSuffix(v, t) },                        //(string)strictly ends with a string
-	"contains":  func(v string, t string) bool { return strings.Contains(v, t) },                         //(string)strictly contains a string
+	"starts":    strings.HasPrefix,                                                                       //(string)strictly starts with a string
+	"ends":      strings.HasSuffix,                                                                       //(string)strictly ends with a string
+	"contains":  strings.Contains,                                                                        //(string)strictly contains a string
 	"ncontains": func(v string, t string) bool { return !strings.Contains(v, t) },                        //(string)strictly not contains a string
 	"upper":     func(v string, t string) bool { return strings.ToUpper(v) == v },                        //(bool) must be upper case
 	"lower":     func(v string, t string) bool { return strings.ToLower(v) == v },                        //(bool) must be lower case
@@ -76,56 +78,68 @@ var string_allowed = map[string](func(string, string) bool){
 		if ml, err := strconv.Atoi(t); err == nil {
 			return ml > len(v)
 		} else {
-			return true
+			return false
 		}
 	}, //(int) strictly set max length
 	"min_len": func(v string, t string) bool {
 		if ml, err := strconv.Atoi(t); err == nil {
 			return ml < len(v)
 		} else {
-			return true
+			return false
 		}
 	}, //(int) strictly set min length
-	"type": func(v string, t string) bool {
-		var extra string
-		ls := strings.SplitN(t, ",", 2)
-		if len(ls) > 1 {
-			t = ls[0]
-			extra = ls[1]
-		}
-		if ta, ok := type_map[t]; ok {
-			switch ta.CheckBy {
-			case 0:
-				return regx_check(v, ta.Regx)
-			case 1:
-				if extra == "" {
-					extra = ta.Regx
-				}
-				if type_func, ok := type_func_map[t]; ok {
-					return type_func(v, extra)
-				}
-
-			}
-		}
-		return true
-	}, //(string)validate as specific type. e.g:int, float, hex, bin, ip, email, url, uuid, date, month, domain
+	"type": CheckByType,                                   //(string)validate as specific type. e.g:int, float, hex, bin, ip, email, url, uuid, date, month, domain
 	"regx": regx_check,                                    //(string) only allowed matched strings
 	"func": func(v string, t string) bool { return true }, //(string) given check func name under this struct
 }
 
-type typeAttr struct {
-	CheckBy int    //0:regx, 1:func
-	Regx    string //
+func CheckByType(v string, t string) bool {
+	var extra string
+	ls := strings.SplitN(t, ",", 2)
+	if len(ls) > 1 {
+		t = ls[0]
+		extra = ls[1]
+	}
+	if ta, ok := type_map[t]; ok {
+		switch ta.CheckBy {
+		case 0:
+			return regx_check(v, ta.Regx)
+		case 1:
+			if extra == "" {
+				extra = ta.Regx
+			}
+			if type_func, ok := type_func_map[t]; ok {
+				return type_func(v, extra)
+			}
+
+		}
+	}
+	return false
+}
+
+func parseI(s string) []int {
+	var ret []int
+	return ret
+}
+
+func parseS(s string) []string {
+	var ret []string
+	return ret
 }
 
 var type_map = map[string]typeAttr{
+	"num":      {0, `^[0-9]+$`},
+	"bool":     {0, `^(true|false)$`},
+	"alpha":    {0, `^[a-zA-Z]+$`},
+	"md5":      {0, `^[a-fA-F0-9]{32}$`},
+	"md5(16)":  {0, `^[a-fA-F0-9]{16}$`},
 	"int":      {0, `^(?:[-+]?(?:0|[1-9][0-9]*))$`},
 	"float":    {0, `^(?:[-+]?(?:[0-9]+))?(?:\.[0-9]*)?(?:[eE][\+\-]?(?:[0-9]+))?$`},
 	"hex":      {0, `^[a-fA-F0-9]+$`},
-	"ipv4":     {0, `^((?:(?:25[0-5]|2[0-4]\d|((1\d{2})|([1-9]?\d)))\.){3}(?:25[0-5]|2[0-4]\d|((1\d{2})|([1-9]?\d))))$`}, //python reg
-	"ip":       {0, IP},
+	"ip":       {0, `^((?:(?:25[0-5]|2[0-4]\d|((1\d{2})|([1-9]?\d)))\.){3}(?:25[0-5]|2[0-4]\d|((1\d{2})|([1-9]?\d))))$`}, //python reg
+	"ipv6":     {0, IP},
 	"email":    {0, Email},
-	"url":      {0, `^https?\://[^\s\r\n]+$`},
+	"url":      {1, `^(https?\:\/\/)?([^\s\r\n]+\/)*[^\s\r\n]+\/?$`},
 	"hexcolor": {0, `^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$`},
 	"fullpath": {0, "(" + WinPath + ")|(" + UnixPath + ")"},
 	"uuid3":    {0, `^[a-f\d]{8}-[a-f\d]{4}-3[a-f\d]{3}-[a-f\d]{4}-[a-f\d]{12}$`},
@@ -135,20 +149,76 @@ var type_map = map[string]typeAttr{
 	"base64":   {0, Base64},                     //done
 	"date":     {1, `2006-01-02T15:04:05.000Z`}, //done,allow template
 	"json":     {1, ``},
-	"domain":   {1, ``},
+	"domain":   {1, `^([\w\d]\.?([\w\d\-]+\.)*[\w\d\-]*[\w\d])(\:\d+)?$`},
 	"map":      {1, ``}, // allow recursion
 	"list":     {1, ``}, // allow recursion
 }
 
 var type_func_map = map[string](func(string, string) bool){
 	"domain": func(v string, t string) bool {
-		return true
+		return regx_check(v, t) //todo :tld check
 	},
 	"date": func(v string, t string) bool {
 		_, ok := time.Parse(t, v)
 		return ok == nil
 
 	},
+	"url": func(v string, t string) bool {
+		if !strings.HasPrefix(v, "http") {
+			v = "http://" + v
+		}
+		parsed, ok := url.Parse(v)
+		fmt.Printf("%#v", parsed)
+		return ok == nil && parsed.Host != ""
+
+	},
+	"json": func(v string, t string) bool {
+		var js json.RawMessage
+		return json.Unmarshal([]byte(v), &js) == nil
+	},
+}
+
+//RegisterType :Regster a type use regx: `type:"{typename}"`
+//When found a tag use this typename, regx_check will be called.
+//This function can short your tag instead of use regx:"looooooong regx" again and again
+func RegisterType(typename string, regx string) error {
+	var ret error
+	if _, ok := type_map[typename]; ok {
+		ret = fmt.Errorf("Type %s already exists.", typename)
+	} else {
+		if _, ret := regexp.Compile(regx); ret == nil {
+			type_map[typename] = typeAttr{0, regx}
+		}
+	}
+	return ret
+}
+
+//RegisterTypeF :Regster a type use func: `type:"{typename}"`
+//When found a tag use this typename, this func will be called.
+//targetFunc(fieldvalue, defaultArg)
+//This function can allow you to check you own data type.
+func RegisterTypeF(typename string, targetFunc func(string, string) bool, defaultArg string) error {
+	var ret error
+	if _, ok := type_map[typename]; ok {
+		ret = fmt.Errorf("Type %s already exists.", typename)
+	} else {
+		type_map[typename] = typeAttr{1, defaultArg}
+		type_func_map[typename] = targetFunc
+	}
+	return ret
+}
+
+//RegisterTagF :Regster a tag use func: `{tagname}:"somevalue"`
+//When found a tag with this tagname, this func will be called.
+//targetFunc(fieldvalue, somevalue)
+func RegisterTagF(tagname string, targetFunc func(string, string) bool) error {
+	var ret error
+	if _, ok := tag_map[tagname]; ok {
+		ret = fmt.Errorf("Tag %s already exists.", tagname)
+	} else {
+		tag_map[tagname] = targetFunc
+	}
+	return ret
 }
 
 func (checker *FieldCheck) checkStringField(val reflect.Value, field reflect.StructField) error {
@@ -156,7 +226,7 @@ func (checker *FieldCheck) checkStringField(val reflect.Value, field reflect.Str
 	empty_tag := "empty"
 	empty_value := ""
 	valreal := val.String()
-	table := string_allowed
+	table := tag_map
 	empty, _ := checker.getFieldTag(field, empty_tag)
 	if empty == "true" && valreal == empty_value {
 		return nil

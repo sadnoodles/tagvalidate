@@ -12,6 +12,7 @@ type ValidateTestModel struct {
 	Id          int64          `zero:"false"`
 	Name        string         `empty:"false" type:"ipv4"`
 	CustomCheck string         `func:"CheckCustom"`
+	URL         string         `empty:"true" type:"url"`
 	Actions     map[string]int `func:"CheckAction"`
 	Emptytag    map[string]int
 	CommonTestModel
@@ -33,14 +34,20 @@ func TestFieldCheck_checkStringField(t *testing.T) {
 		field reflect.StructField
 	}
 	type StringModel struct {
-		Name string `type:"ip" starts:"xxx" regx:"hello?"`
+		Name    string `regx:"hello?"`
+		InnerIP string `type:"ip" regx:"^(127|192|172|10[\\D])"`
+		URL     string `type:"url"`
+		BadURL  string `type:"url"`
 	}
 	var checker = new(FieldCheck)
-	s := StringModel{Name: "293.2.3.4"}
+	s := StringModel{
+		Name:    "hello",
+		InnerIP: "100.0.0.1",
+		URL:     "google.com:80/sdasd23/",
+		BadURL:  "aa-===*23阿什顿2sad/sdasd23/",
+	}
 	val := reflect.ValueOf(s)
 	st := val.Type()
-	i := 0
-	fieldvalue := val.Field(i)
 
 	tests := []struct {
 		name    string
@@ -49,7 +56,10 @@ func TestFieldCheck_checkStringField(t *testing.T) {
 		wantErr bool
 	}{
 		// TODO: Add test cases.
-		{"checker_string_field", checker, args{fieldvalue, st.Field(i)}, false},
+		{"checker_string_field", checker, args{val.Field(0), st.Field(0)}, false},
+		{"checker_string_field", checker, args{val.Field(1), st.Field(1)}, true},
+		{"checker_string_field", checker, args{val.Field(2), st.Field(2)}, false},
+		{"checker_string_field", checker, args{val.Field(3), st.Field(3)}, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
