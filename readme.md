@@ -4,7 +4,7 @@ The ultimate way to validate your data. All you need is add some info on tags wi
 
 # Install
 
-    `go get `
+    `go get github.com/sadnoodle/tagvalidate`
 
 # Example:
 
@@ -14,7 +14,7 @@ package main
 import (
 	"fmt"
 
-	"./tagvalidate"
+	_ "github.com/sadnoodle/tagvalidate"
 )
 
 type Common struct {
@@ -35,29 +35,28 @@ func main() {
 
 # Usage:
 
-Syntex: `{option name}:"{option value}" [{option name2}:"{option value2}"...]`
+Syntax: `{option name}:"{option value}" [{option name2}:"{option value2}"...]`
 
 ## For string field you can use those:
 
-| Option    | Value          | Meaning                       |
-| --------- | -------------- | ----------------------------- |
-| empty     | false/true     | Allow this field empty or not |
-| eq        | any string     | Strictly equal to value       |
-| neq       | any string     | Strictly not equal to value   |
-| starts    |                |                               |
-| ends      |                |                               |
-| contains  |                |                               |
-| ncontains |                |                               |
-| upper     |                |                               |
-| lower     |                |                               |
-| empty     |                |                               |
-| len       |                |                               |
-| max_len   |                |                               |
-| min_len   |                |                               |
-| regx      |                |                               |
-| type      | See type table |                               |
-| func      |                |                               |
-|           |                |                               |
+| Option    | Value          | Meaning                            |
+| --------- | -------------- | ---------------------------------- |
+| empty     | false/true     | Allow this field empty or not      |
+| eq        | any string (s) | Strictly equal to s                |
+| neq       | any string     | Strictly not equal to s            |
+| starts    | any string     | Starts with s                      |
+| ends      | any string     | Ends with s                        |
+| contains  | any string     | Contains s                         |
+| ncontains | any string     | Note contains s                    |
+| upper     | false/true     |                                    |
+| lower     | false/true     |                                    |
+| len       | int            | Must be this long                  |
+| max_len   | int            | Max length                         |
+| min_len   | int            | Min length                         |
+| regx      | reg exp        | re check                           |
+| type      | See type table | Frequency types                    |
+| func      | Func name      | Custom functions under your struct |
+|           |                | func (string)  bool                |
 
 Type is a quick access to some frequency data type, most of then is validated by regx. For type, allow those values. To add extra value (if this type allowed extra value) use `,` after type name like: `type:"date,2006-01-02"`:
 
@@ -67,8 +66,8 @@ Type is a quick access to some frequency data type, most of then is validated by
 | int       |                           | 1, +123, -3, 0 |           -            |
 | float     |                           |                |           -            |
 | hex       |                           |                |           -            |
-| ipv4      |                           |                |           -            |
-| ip        | ipv4/ipv6                 |                |           -            |
+| ipv4      | ipv4 only                 |                |           -            |
+| ip        | ipv4 or ipv6              |                |           -            |
 | email     |                           |                |           -            |
 | url       |                           |                |           -            |
 | hexcolor  | color use hex             |                |           -            |
@@ -83,25 +82,31 @@ Type is a quick access to some frequency data type, most of then is validated by
 | md5(16)   | MD5 checksum (length 16)  |                |           -            |
 | base64    | base64 encoded string     |                |           -            |
 | date      | date format               |                | date formating  string |
-| *json     | json dumped string        |                |                        |
+| json      | json dumped string        |                |                        |
 | *domain   | domain of a web site      |                |                        |
 | *map      |                           |                |                        |
 | *list     |                           |                |                        |
 
 \* Those are not done yet. 
 
+To check if data is a LAN IP:
+```go
+InnerIP string `type:"ip" regx:"^(127|192|172|10[\\D])"`
+```
+NOTE: dot(".") in tag will cause tag parse error. Also you should use two `\\` to escape slash.
+
 ## For integers:
 
 
-| Option | Value      | Meaning                     |
-| ------ | ---------- | --------------------------- |
-| zero   | false/true | Allow zero or not           |
-| eq     | any int    | Strictly equal to value     |
-| neq    | any int    | Strictly not equal to value |
-| max    |            |                             |
-| min    |            |                             |
-| func   |            |                             |
-|        |            |                             |
+| Option | Value      | Meaning                            |
+| ------ | ---------- | ---------------------------------- |
+| zero   | false/true | Allow zero or not                  |
+| eq     | any int    | Strictly equal to value            |
+| neq    | any int    | Strictly not equal to value        |
+| max    |            |                                    |
+| min    |            |                                    |
+| func   | Func name  | Custom functions under your struct |
+|        |            | func (string)  bool                |
 
 ## TODO
 
