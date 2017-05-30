@@ -4,7 +4,7 @@ The ultimate way to validate your data. All you need is add some info on tags wi
 
 # Install
 
-    `go get github.com/sadnoodle/tagvalidate`
+    `go get github.com/sadnoodles/tagvalidate`
 
 # Example:
 
@@ -14,7 +14,7 @@ package main
 import (
 	"fmt"
 
-	_ "github.com/sadnoodle/tagvalidate"
+	"github.com/sadnoodles/tagvalidate"
 )
 
 type Common struct {
@@ -39,26 +39,36 @@ Syntax: `{option name}:"{option value}" [{option name2}:"{option value2}"...]`
 
 ## For string field you can use those:
 
-| Option    | Value          | Meaning                            |
-| --------- | -------------- | ---------------------------------- |
-| empty     | false/true     | Allow this field empty or not      |
-| eq        | any string (s) | Strictly equal to s                |
-| neq       | any string     | Strictly not equal to s            |
-| starts    | any string     | Starts with s                      |
-| ends      | any string     | Ends with s                        |
-| contains  | any string     | Contains s                         |
-| ncontains | any string     | Note contains s                    |
-| upper     | false/true     |                                    |
-| lower     | false/true     |                                    |
-| len       | int            | Must be this long                  |
-| max_len   | int            | Max length                         |
-| min_len   | int            | Min length                         |
-| regx      | reg exp        | re check                           |
-| type      | See type table | Frequency types                    |
-| func      | Func name      | Custom functions under your struct |
-|           |                | func (string)  bool                |
+| Option    | Value              | Meaning                            |
+| --------- | ------------------ | ---------------------------------- |
+| empty     | false/true         | Allow this field empty or not      |
+| eq        | any string (s)     | Strictly equal to s                |
+| neq       | any string         | Strictly not equal to s            |
+| starts    | any string         | Starts with s                      |
+| ends      | any string         | Ends with s                        |
+| contains  | any string         | Contains s                         |
+| ncontains | any string         | Note contains s                    |
+| upper     | false/true         |                                    |
+| lower     | false/true         |                                    |
+| len       | int                | Must be this long                  |
+| max_len   | int                | Max length                         |
+| min_len   | int                | Min length                         |
+| regx      | reg exp            | re check                           |
+| **type**  | **See type table** | **Frequency types**                |
+| func      | Func name          | Custom functions under your struct |
+|           |                    | func (string)  bool                |
 
-Type is a quick access to some frequency data type, most of then is validated by regx. For type, allow those values. To add extra value (if this type allowed extra value) use `,` after type name like: `type:"date,2006-01-02"`:
+Type is a quick access to some frequency data type, most of then is validated by regx.  Use type tag like this:
+
+```go
+type LoginLog struct{
+    User string `empty:"false" type:"email"`
+    IP string `type:"ipv4"` 
+}
+```
+
+
+For type, allow those values. To add extra value (if this type allowed extra value) use `,` after type name like: `type:"date,2006-01-02"`:
 
 
 | Type name | meaning                   | examples       |      Extra value       |
@@ -98,15 +108,15 @@ NOTE: dot(".") in tag will cause tag parse error. Also you should use two `\\` t
 ## For integers:
 
 
-| Option | Value      | Meaning                            |
-| ------ | ---------- | ---------------------------------- |
-| zero   | false/true | Allow zero or not                  |
-| eq     | any int    | Strictly equal to value            |
-| neq    | any int    | Strictly not equal to value        |
-| max    |            |                                    |
-| min    |            |                                    |
-| func   | Func name  | Custom functions under your struct |
-|        |            | func (string)  bool                |
+| Option | Value       | Meaning                            |
+| ------ | ----------- | ---------------------------------- |
+| zero   | false/true  | Allow zero or not                  |
+| eq     | any int (i) | Strictly equal to i                |
+| neq    | any int     | Strictly not equal to i            |
+| max    | int         | Max value                          |
+| min    | int         | Min value                          |
+| func   | Func name   | Custom functions under your struct |
+|        |             | func (int64)  bool                 |
 
 ## TODO
 
