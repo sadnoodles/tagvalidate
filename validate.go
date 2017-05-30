@@ -207,9 +207,6 @@ func (checker *FieldCheck) ValidateStructV(val reflect.Value) error {
 		// fmt.Printf("Field Name: %s,\t Field Value: %v,\t Address: %v\t, Field type: %v\t, Field kind: %v\n", typeField.Name,
 		// 	valueField.Interface(), address, typeField.Type, valueField.Kind())
 
-		if valueField.Kind() == reflect.Struct {
-			return checker.ValidateStructV(valueField)
-		}
 		if tagvalue, ok := typeField.Tag.Lookup(checker.getTagName("func")); ok {
 			var checked bool
 			checked = reflectCallV(oldval, tagvalue, valueField)
@@ -221,6 +218,9 @@ func (checker *FieldCheck) ValidateStructV(val reflect.Value) error {
 		err := checker.checkByType(valueField, typeField)
 		if err != nil {
 			return err
+		}
+		if valueField.Kind() == reflect.Struct {
+			return checker.ValidateStructV(valueField)
 		}
 	}
 	return nil
