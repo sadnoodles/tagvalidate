@@ -173,6 +173,9 @@ func (checker *FieldCheck) checkByType(val reflect.Value, field reflect.StructFi
 
 func (checker *FieldCheck) ValidateStructV(val reflect.Value) error {
 	// https://stackoverflow.com/questions/24348184/get-pointer-to-value-using-reflection
+	if !val.IsValid() { //ignore nil
+		return nil
+	}
 	if val.Kind() == reflect.Interface && !val.IsNil() {
 		elm := val.Elem()
 		if elm.Kind() == reflect.Ptr && !elm.IsNil() && elm.Elem().Kind() == reflect.Ptr {
