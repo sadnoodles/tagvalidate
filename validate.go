@@ -220,7 +220,10 @@ func (checker *FieldCheck) ValidateStructV(val reflect.Value) error {
 			return err
 		}
 		if valueField.Kind() == reflect.Struct {
-			return checker.ValidateStructV(valueField)
+			err = checker.ValidateStructV(valueField)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
